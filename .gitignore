@@ -40,10 +40,6 @@ uv.lock
 # ---------------------------
 # Data
 # ---------------------------
-data/raw/
-data/processed/
-data/external/
-data/interim/
 *.csv
 *.tsv
 *.parquet
@@ -51,6 +47,7 @@ data/interim/
 *.xls
 *.json
 *.db
+*.npy
 
 # ---------------------------
 # Models

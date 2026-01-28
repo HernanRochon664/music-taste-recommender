@@ -64,34 +64,39 @@ class MusicRecommender:
         self,
         track_id: str,
         n_recommendations: int = 10,
+        n_candidates: int = 50,
         exclude_ids: List[str] = None
     ) -> pd.DataFrame:
         """
-        Finds similar tracks based on embeddings
+        Finds similar tracks to a given track with re-ranking
 
         Args:
             track_id: ID of the base track
-            n_recommendations: Number of recommendations
+            n_recommendations: Number of final recommendations
+            n_candidates: Number of candidates for re-ranking
             exclude_ids: IDs to exclude (e.g., user history)
 
         Returns:
-            DataFrame with recommendations and similarity scores
+            DataFrame with recommendations and scores
         """
         if track_id not in self.track_id_to_idx:
             raise ValueError(f"Track ID {track_id} not found in dataset")
 
-        # Embedding of the base track
+        # Embedding del track base
         idx = self.track_id_to_idx[track_id]
         query_embedding = self.embeddings[idx].reshape(1, -1)
 
         # Calculate similarities
         similarities = cosine_similarity(query_embedding, self.embeddings)[0]
 
-        # Order by similarity (excluding the track itself)
+        # Obtain candidates
         similar_indices = np.argsort(similarities)[::-1]
 
-        # Filter
-        recommendations = []
+        # Genre of the base track (for diversity calculation)
+        base_genre = self.get_track_info(track_id)['general_genre']
+
+        # Filter and rank candidates
+        candidates = []
         for sim_idx in similar_indices:
             sim_track_id = self.track_ids[sim_idx]
 
@@ -103,13 +108,34 @@ class MusicRecommender:
             if exclude_ids and sim_track_id in exclude_ids:
                 continue
 
-            recommendations.append({
+            # Calculate diversity
+            track_genre = self.get_track_info(sim_track_id)['general_genre']
+            is_new_genre = 1.0 if track_genre != base_genre else 0.0
+
+            # Combined score
+            combined_score = (
+                self.strategy.w_relevance * similarities[sim_idx] +
+                self.strategy.w_diversity * is_new_genre
+            )
+
+            candidates.append({
                 'track_id': sim_track_id,
-                'similarity': similarities[sim_idx]
+                'similarity': similarities[sim_idx],
+                'diversity_component': is_new_genre,
+                'combined_score': combined_score
             })
 
-            if len(recommendations) >= n_recommendations:
+            if len(candidates) >= n_candidates:
                 break
+
+        # Sort by combined score
+        candidates_sorted = sorted(
+            candidates,
+            key=lambda x: x['combined_score'],
+            reverse=True
+        )
+
+        recommendations = candidates_sorted[:n_recommendations]
 
         # Create DataFrame with complete information
         rec_df = pd.DataFrame(recommendations)
@@ -124,20 +150,28 @@ class MusicRecommender:
         self,
         user_history_ids: List[str],
         n_recommendations: int = 10,
+        n_candidates: int = 100,
         evaluate: bool = True
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Generates recommendations based on user history
+        Generates recommendations based on user history with re-ranking
+
+        Process:
+        1. Get top-N candidates by similarity (N >> n_recommendations)
+        2. For each candidate, calculate diversity score
+        3. Re-rank combining similarity and diversity according to strategy
+        4. Return top-K final recommendations
 
         Args:
-            user_history_ids: List of track_ids from the user history
-            n_recommendations: Number of recommendations
+            user_history_ids: List of track_ids from user history
+            n_recommendations: Number of final recommendations
+            n_candidates: Number of candidates to consider for re-ranking
             evaluate: If True, evaluates with business metrics
 
         Returns:
             (recommendations_df, metrics_dict)
         """
-        # Calculate average embedding of the history
+        # 1. Calculate embedding average of the user history (user profile)
         history_embeddings = np.array([
             self.embeddings_dict[tid]
             for tid in user_history_ids
@@ -149,40 +183,79 @@ class MusicRecommender:
 
         user_profile_embedding = history_embeddings.mean(axis=0).reshape(1, -1)
 
-        # Calculate similarities with all tracks
+        # 2. Calculate similarities with all tracks
         similarities = cosine_similarity(user_profile_embedding, self.embeddings)[0]
 
-        # Order by similarity
-        similar_indices = np.argsort(similarities)[::-1]
+        # 3. Get top-N candidates by similarity
+        candidate_indices = np.argsort(similarities)[::-1]
 
-        # Filter (exclude tracks from history)
-        recommendations = []
-        for sim_idx in similar_indices:
-            sim_track_id = self.track_ids[sim_idx]
+        # Filter candidates (exclude history)
+        candidates = []
+        for idx in candidate_indices:
+            track_id = self.track_ids[idx]
 
-            if sim_track_id in user_history_ids:
+            if track_id in user_history_ids:
                 continue
 
-            recommendations.append({
-                'track_id': sim_track_id,
-                'similarity': similarities[sim_idx]
+            candidates.append({
+                'idx': idx,
+                'track_id': track_id,
+                'similarity': similarities[idx]
             })
 
-            if len(recommendations) >= n_recommendations:
+            if len(candidates) >= n_candidates:
                 break
 
-        # DataFrame with complete information
-        rec_df = pd.DataFrame(recommendations)
+        # 4. Get genres from history (to calculate diversity)
+        user_history_df = self.df[self.df['track_id'].isin(user_history_ids)]
+        user_history_genres = set(user_history_df['general_genre'].tolist())
+
+        # 5. Re-ranking: combine similarity + diversity
+        for candidate in candidates:
+            track_id = candidate['track_id']
+            track_info = self.get_track_info(track_id)
+            track_genre = track_info['general_genre']
+
+            # Calculate diversity: 1 if new genre, 0 if known genre
+            is_new_genre = 1.0 if track_genre not in user_history_genres else 0.0
+
+            # Combined score according to strategy
+            combined_score = (
+                self.strategy.w_relevance * candidate['similarity'] +
+                self.strategy.w_diversity * is_new_genre
+            )
+
+            candidate['diversity_component'] = is_new_genre
+            candidate['combined_score'] = combined_score
+
+        # 6. Order by combined score and take top-K
+        candidates_sorted = sorted(
+            candidates,
+            key=lambda x: x['combined_score'],
+            reverse=True
+        )
+
+        top_recommendations = candidates_sorted[:n_recommendations]
+
+        # 7. Create DataFrame with complete information
+        rec_df = pd.DataFrame([
+            {
+                'track_id': rec['track_id'],
+                'similarity': rec['similarity'],
+                'diversity_component': rec['diversity_component'],
+                'combined_score': rec['combined_score']
+            }
+            for rec in top_recommendations
+        ])
+
         rec_df = rec_df.merge(
             self.df[['track_id', 'name', 'general_genre', 'popularity', 'artist_popularity']],
             on='track_id'
         )
 
-        # Evaluate with business metrics
+        # 8. Evaluate with business metrics
         metrics = {}
         if evaluate:
-            user_history_df = self.df[self.df['track_id'].isin(user_history_ids)]
-
             metrics = BusinessMetrics.evaluate_recommendations(
                 rec_df,
                 user_history_df,
@@ -192,6 +265,11 @@ class MusicRecommender:
                     'w_diversity': self.strategy.w_diversity
                 }
             )
+
+            # Add additional info
+            metrics['avg_similarity'] = rec_df['similarity'].mean()
+            metrics['avg_combined_score'] = rec_df['combined_score'].mean()
+            metrics['new_genres_count'] = rec_df['diversity_component'].sum()
 
         return rec_df, metrics
 

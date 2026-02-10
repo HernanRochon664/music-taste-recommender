@@ -64,17 +64,22 @@ class MusicRecommender:
         self,
         track_id: str,
         n_recommendations: int = 10,
-        n_candidates: int = 50,
+        n_candidates: int = 100,
         exclude_ids: List[str] = None
     ) -> pd.DataFrame:
         """
-        Finds similar tracks to a given track with re-ranking
+        Find similar tracks with re-ranking based on embeddings
+
+        Uses a quota-based approach to balance relevance and diversity:
+        - Separates candidates into same-genre and different-genre pools
+        - Applies strategy-specific quotas
+        - Orders by similarity within each pool
 
         Args:
-            track_id: ID of the base track
+            track_id: ID of the seed track
             n_recommendations: Number of final recommendations
-            n_candidates: Number of candidates for re-ranking
-            exclude_ids: IDs to exclude (e.g., user history)
+            n_candidates: Number of candidates to consider for re-ranking
+            exclude_ids: Track IDs to exclude (e.g., user history)
 
         Returns:
             DataFrame with recommendations and scores
@@ -82,63 +87,123 @@ class MusicRecommender:
         if track_id not in self.track_id_to_idx:
             raise ValueError(f"Track ID {track_id} not found in dataset")
 
-        # Embedding del track base
+        # Get embedding of seed track
         idx = self.track_id_to_idx[track_id]
         query_embedding = self.embeddings[idx].reshape(1, -1)
 
-        # Calculate similarities
+        # Calculate similarities with all tracks
         similarities = cosine_similarity(query_embedding, self.embeddings)[0]
 
-        # Obtain candidates
+        # Get top candidates sorted by similarity
         similar_indices = np.argsort(similarities)[::-1]
 
-        # Genre of the base track (for diversity calculation)
-        base_genre = self.get_track_info(track_id)['general_genre']
+        # Get seed track info for filtering
+        seed_info = self.get_track_info(track_id)
+        seed_genre = seed_info['general_genre']
+        seed_name = seed_info['name'].lower()
+        seed_artist_popularity = seed_info.get('artist_popularity', 0)
 
-        # Filter and rank candidates
+        # Collect candidates with filtering
         candidates = []
         for sim_idx in similar_indices:
             sim_track_id = self.track_ids[sim_idx]
 
-            # Exclude the track itself
+            # Exclude the seed track itself (by ID)
             if sim_track_id == track_id:
                 continue
 
-            # Exclude tracks from history if specified
+            # Exclude tracks from user history if specified
             if exclude_ids and sim_track_id in exclude_ids:
                 continue
 
-            # Calculate diversity
-            track_genre = self.get_track_info(sim_track_id)['general_genre']
-            is_new_genre = 1.0 if track_genre != base_genre else 0.0
+            track_info = self.get_track_info(sim_track_id)
+            track_name = track_info['name'].lower()
+            track_artist_popularity = track_info.get('artist_popularity', 0)
 
-            # Combined score
-            combined_score = (
-                self.strategy.w_relevance * similarities[sim_idx] +
-                self.strategy.w_diversity * is_new_genre
-            )
+            # Filter duplicates (same track, different versions)
+            # Allow if names are similar BUT artist popularity differs significantly
+            # (likely different artists with same song name, e.g., covers)
+            if seed_name in track_name or track_name in seed_name:
+                artist_pop_diff = abs(seed_artist_popularity - track_artist_popularity)
+
+                # If artist popularity is very similar, likely same artist/version
+                if artist_pop_diff < 10:  # Threshold: 10 popularity points
+                    continue
+
+            track_genre = track_info['general_genre']
 
             candidates.append({
                 'track_id': sim_track_id,
                 'similarity': similarities[sim_idx],
-                'diversity_component': is_new_genre,
-                'combined_score': combined_score
+                'genre': track_genre,
+                'is_same_genre': track_genre == seed_genre
             })
 
             if len(candidates) >= n_candidates:
                 break
 
-        # Sort by combined score
-        candidates_sorted = sorted(
-            candidates,
-            key=lambda x: x['combined_score'],
-            reverse=True
-        )
+        # Separate candidates by genre
+        same_genre = [c for c in candidates if c['is_same_genre']]
+        diff_genre = [c for c in candidates if not c['is_same_genre']]
 
-        recommendations = candidates_sorted[:n_recommendations]
+        # Sort each pool by similarity (descending)
+        same_genre.sort(key=lambda x: x['similarity'], reverse=True)
+        diff_genre.sort(key=lambda x: x['similarity'], reverse=True)
+
+        # Determine quotas based on strategy
+        # Higher w_diversity = more different genres
+        if self.strategy.w_diversity >= 0.6:  # Aggressive (30% same, 70% different)
+            n_same = max(1, int(n_recommendations * 0.3))
+            n_diff = n_recommendations - n_same
+        elif self.strategy.w_diversity >= 0.5:  # Discovery (40% same, 60% different)
+            n_same = max(2, int(n_recommendations * 0.4))
+            n_diff = n_recommendations - n_same
+        elif self.strategy.w_diversity >= 0.4:  # Balanced (50% same, 50% different)
+            n_same = int(n_recommendations * 0.5)
+            n_diff = n_recommendations - n_same
+        else:  # Conservative/Retention (70% same, 30% different)
+            n_same = int(n_recommendations * 0.7)
+            n_diff = n_recommendations - n_same
+
+        # Select according to quotas
+        selected_same = same_genre[:n_same]
+        selected_diff = diff_genre[:n_diff]
+
+        # Fill remaining slots if one pool is exhausted
+        total_selected = len(selected_same) + len(selected_diff)
+        if total_selected < n_recommendations:
+            # Need more tracks, take from remaining candidates
+            remaining = same_genre[n_same:] + diff_genre[n_diff:]
+            remaining.sort(key=lambda x: x['similarity'], reverse=True)
+            needed = n_recommendations - total_selected
+            selected_same.extend(remaining[:needed])
+
+        # Combine and sort by similarity for presentation
+        final_recommendations = selected_same + selected_diff
+        final_recommendations.sort(key=lambda x: x['similarity'], reverse=True)
+        final_recommendations = final_recommendations[:n_recommendations]
+
+        # Calculate scores for visualization
+        for rec in final_recommendations:
+            diversity_component = 0.0 if rec['is_same_genre'] else 1.0
+            combined_score = (
+                self.strategy.w_relevance * rec['similarity'] +
+                self.strategy.w_diversity * diversity_component
+            )
+            rec['diversity_component'] = diversity_component
+            rec['combined_score'] = combined_score
 
         # Create DataFrame with complete information
-        rec_df = pd.DataFrame(recommendations)
+        rec_df = pd.DataFrame([
+            {
+                'track_id': rec['track_id'],
+                'similarity': rec['similarity'],
+                'diversity_component': rec['diversity_component'],
+                'combined_score': rec['combined_score']
+            }
+            for rec in final_recommendations
+        ])
+
         rec_df = rec_df.merge(
             self.df[['track_id', 'name', 'general_genre', 'popularity', 'artist_popularity']],
             on='track_id'

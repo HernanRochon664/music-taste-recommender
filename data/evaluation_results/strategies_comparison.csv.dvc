@@ -1,0 +1,5 @@
+outs:
+- md5: de5d913d469bb46236b69eab82a127d3
+  size: 637
+  hash: md5
+  path: strategies_comparison.csv

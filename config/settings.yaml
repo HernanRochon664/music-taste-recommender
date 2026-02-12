@@ -1,0 +1,71 @@
+# Main configuration file for Music Taste Recommender
+# All configurable parameters in one place
+
+project:
+  name: "music-taste-recommender"
+  version: "0.1.0"
+  description: "Business-driven music recommendation system"
+
+# Data paths
+paths:
+  raw_data: "data/raw/almost-a-million-spotify-tracks.csv"
+  processed_data: "data/processed/spotify_clean_balanced.csv"
+  embeddings_dir: "data/embeddings"
+  evaluation_results: "data/evaluation_results"
+  logs: "logs"
+
+# Data processing parameters
+data_processing:
+  min_tracks_per_genre: 10000
+  max_tracks_per_genre: 40000
+  random_state: 64
+
+  # Audio features to extract
+  audio_features:
+    - acousticness
+    - danceability
+    - energy
+    - instrumentalness
+    - liveness
+    - loudness
+    - speechiness
+    - tempo
+    - valence
+    - key
+
+# Embedding generation
+embeddings:
+  model_name: "all-MiniLM-L6-v2"
+  embedding_dim: 402
+  audio_weight: 10.0
+  genre_weight: 1.0
+  batch_size: 256
+
+# Recommender system
+recommender:
+  n_candidates: 100
+  n_recommendations: 10
+  default_strategy: "balanced"
+
+  # Duplicate filtering
+  duplicate_filter:
+    enabled: true
+    artist_popularity_threshold: 10
+
+# Evaluation
+evaluation:
+  n_simulated_users: 500
+  tracks_per_user: 20
+  favorite_genre_ratio: 0.7
+
+# Demo (Streamlit)
+demo:
+  n_seed_tracks_display: 100
+  default_strategy: "balanced"
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_enabled: true
+  console_enabled: true

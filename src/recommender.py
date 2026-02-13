@@ -5,11 +5,12 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import pickle
 
 from .business_metrics import BusinessMetrics
 from config.business_config import RecommendationStrategy, get_strategy
+from config.config_loader import get_config
 
 
 class MusicRecommender:
@@ -22,7 +23,8 @@ class MusicRecommender:
         embeddings_path: str,
         track_ids_path: str,
         dataset_path: str,
-        strategy: str = 'balanced'
+        strategy: str = 'balanced',
+        artist_popularity_threshold: Optional[int] = None
     ):
         """
         Args:
@@ -30,8 +32,16 @@ class MusicRecommender:
             track_ids_path: Path to track_ids.npy
             dataset_path: Path to the CSV dataset
             strategy: Name of the strategy ('balanced', 'retention', 'discovery')
+            artist_popularity_threshold: Threshold to filter duplicates by artist popularity
         """
         print("Loading recommendation system...")
+
+        # Load config for duplicate filtering threshold
+        cfg = get_config()
+        if artist_popularity_threshold is None:
+            artist_popularity_threshold = cfg.get('recommender.duplicate_filter.artist_popularity_threshold', 10)
+
+        self.artist_popularity_threshold = artist_popularity_threshold
 
         # Load embeddings
         self.embeddings = np.load(embeddings_path)
@@ -55,6 +65,7 @@ class MusicRecommender:
         print(f"   - Strategy: {self.strategy.name}")
         print(f"   - Weights: Relevance={self.strategy.w_relevance}, "
             f"Diversity={self.strategy.w_diversity}")
+        print(f"   - Duplicate filter threshold: {self.artist_popularity_threshold}")
 
     def get_track_info(self, track_id: str) -> pd.Series:
         """Get information of a track"""
@@ -127,7 +138,7 @@ class MusicRecommender:
                 artist_pop_diff = abs(seed_artist_popularity - track_artist_popularity)
 
                 # If artist popularity is very similar, likely same artist/version
-                if artist_pop_diff < 10:  # Threshold: 10 popularity points
+                if artist_pop_diff < self.artist_popularity_threshold:
                     continue
 
             track_genre = track_info['general_genre']

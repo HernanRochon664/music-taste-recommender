@@ -7,18 +7,22 @@ import sys
 # Add src to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
+from config.config_loader import get_config
 from src.embeddings import generate_all_embeddings
 
 
 if __name__ == "__main__":
+    # Load config
+    cfg = get_config()
+
     # Paths
     root_dir = Path(__file__).parent.parent
-    data_path = root_dir / "data" / "processed" / "spotify_clean_balanced.csv"
-    output_dir = root_dir / "data" / "embeddings"
+    data_path = Path(cfg.get('paths.processed_data', root_dir / "data" / "processed" / "spotify_clean_balanced.csv"))
+    output_dir = Path(cfg.get('paths.embeddings_dir', root_dir / "data" / "embeddings"))
 
-    # Parameters
-    W_AUDIO = 10.0  # Greater emphasis on audio features (because there are only 18 dims)
-    W_GENRE = 1.0   # Normal weight for genre (384 dims)
+    # Parameters (weights)
+    W_AUDIO = cfg.get('embeddings.audio_weight', 10.0)  # Greater emphasis on audio features
+    W_GENRE = cfg.get('embeddings.genre_weight', 1.0)   # Normal weight for genre
     print("="*60)
     print("GENERATION OF HYBRID EMBEDDINGS")
     print("="*60)

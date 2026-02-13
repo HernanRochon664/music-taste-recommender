@@ -5,7 +5,9 @@ Phase 1: Relevance + Diversity
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+from config.config_loader import get_config
 
 
 class BusinessMetrics:
@@ -89,9 +91,9 @@ class BusinessMetrics:
     def composite_business_score(
         relevance: float,
         diversity: float,
-        w_relevance: float = 0.6,
-        w_diversity: float = 0.4,
-        relevance_threshold: float = 0.5
+        w_relevance: Optional[float] = None,
+        w_diversity: Optional[float] = None,
+        relevance_threshold: Optional[float] = None
     ) -> Dict[str, float]:
         """
         Composite business score with penalty for low relevance
@@ -106,6 +108,15 @@ class BusinessMetrics:
         Returns:
             Dict with score and components
         """
+        # Load defaults from config if not provided
+        cfg = get_config()
+        if w_relevance is None:
+            w_relevance = cfg.get('recommender.strategies.balanced.w_relevance', 0.6)
+        if w_diversity is None:
+            w_diversity = cfg.get('recommender.strategies.balanced.w_diversity', 0.4)
+        if relevance_threshold is None:
+            relevance_threshold = cfg.get('recommender.relevance_threshold', 0.5)
+
         # Penalty if relevance very low
         if relevance < relevance_threshold:
             penalty = relevance / relevance_threshold  # Penalizes proportionally
@@ -143,7 +154,11 @@ class BusinessMetrics:
             Dict with all metrics
         """
         if strategy_weights is None:
-            strategy_weights = {'w_relevance': 0.6, 'w_diversity': 0.4}
+            cfg = get_config()
+            strategy_weights = {
+                'w_relevance': cfg.get('recommender.strategies.balanced.w_relevance', 0.6),
+                'w_diversity': cfg.get('recommender.strategies.balanced.w_diversity', 0.4)
+            }
 
         # Calculate individual metrics
         relevance = BusinessMetrics.relevance_score(

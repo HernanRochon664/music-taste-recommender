@@ -3,8 +3,10 @@ User and behavior simulator for recommendation evaluation
 """
 import pandas as pd
 import numpy as np
-from typing import List
+from typing import List, Optional
 from dataclasses import dataclass
+
+from config.config_loader import get_config
 
 
 @dataclass
@@ -38,9 +40,9 @@ class UserSimulator:
 
     def generate_users(
         self,
-        n_users: int = 1000,
-        tracks_per_user: int = 20,
-        favorite_genre_ratio: float = 0.7
+        n_users: Optional[int] = None,
+        tracks_per_user: Optional[int] = None,
+        favorite_genre_ratio: Optional[float] = None
     ) -> List[SimulatedUser]:
         """
         Generates simulated users with realistic listening histories
@@ -53,6 +55,14 @@ class UserSimulator:
         Returns:
             SimulatedUser list
         """
+        # Load defaults from config if not provided
+        cfg = get_config()
+        if n_users is None:
+            n_users = cfg.get('evaluation.n_simulated_users', 1000)
+        if tracks_per_user is None:
+            tracks_per_user = cfg.get('evaluation.tracks_per_user', 20)
+        if favorite_genre_ratio is None:
+            favorite_genre_ratio = cfg.get('evaluation.favorite_genre_ratio', 0.7)
         users = []
 
         print(f"Generating {n_users} simulated users...")

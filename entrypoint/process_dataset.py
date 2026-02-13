@@ -20,11 +20,13 @@ from config.genre_mapping import (
     MIN_TRACKS_PER_GENRE,
     MAX_TRACKS_PER_GENRE
 )
+from config.config_loader import get_config
 
 
-# Configuration
-RAW_DATA_PATH = "data/raw/music_data.csv"
-OUTPUT_PATH = "data/processed/spotify_clean_balanced.csv"
+# Configuration (load from YAML/config)
+cfg = get_config()
+RAW_DATA_PATH = cfg.get('paths.raw_data', "data/raw/music_data.csv")
+OUTPUT_PATH = cfg.get('paths.processed_data', "data/processed/spotify_clean_balanced.csv")
 
 
 def main():
@@ -39,12 +41,13 @@ def main():
         print(f"\n   And place it in: {RAW_DATA_PATH}")
         sys.exit(1)
 
-    # Initialize processor
+    # Initialize processor (use config defaults where available)
+    random_state = cfg.get('data_processing.random_state', 64)
     processor = DatasetProcessor(
         genre_mapping=GENRE_GROUPS,
-        min_tracks_per_genre=MIN_TRACKS_PER_GENRE,
-        max_tracks_per_genre=MAX_TRACKS_PER_GENRE,
-        random_state=64
+        min_tracks_per_genre=cfg.get('data_processing.min_tracks_per_genre', MIN_TRACKS_PER_GENRE),
+        max_tracks_per_genre=cfg.get('data_processing.max_tracks_per_genre', MAX_TRACKS_PER_GENRE),
+        random_state=random_state
     )
 
     # Process

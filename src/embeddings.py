@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
+from config.config_loader import get_config
 from sklearn.preprocessing import StandardScaler
 import pickle
 from typing import Dict, Tuple
@@ -29,9 +30,9 @@ class TrackEmbeddingGenerator:
 
     def __init__(
         self,
-        model_name: str = 'all-MiniLM-L6-v2',
-        w_audio: float = 10.0,
-        w_genre: float = 1.0
+        model_name: str = None,
+        w_audio: float = None,
+        w_genre: float = None
     ):
         """
         Args:
@@ -39,16 +40,28 @@ class TrackEmbeddingGenerator:
             w_audio: Weight for audio features
             w_genre: Weight for genre embeddings
         """
+        # Load defaults from config when not provided
+        cfg = get_config()
+        if model_name is None:
+            model_name = cfg.get('embeddings.model_name', 'all-MiniLM-L6-v2')
+        if w_audio is None:
+            w_audio = cfg.get('embeddings.audio_weight', 10.0)
+        if w_genre is None:
+            w_genre = cfg.get('embeddings.genre_weight', 1.0)
+
         self.model_name = model_name
         self.w_audio = w_audio
         self.w_genre = w_genre
 
         # load sentence-transformers model
-        print(f"Loading model {model_name}...")
-        self.sentence_model = SentenceTransformer(model_name)
+        print(f"Loading model {self.model_name}...")
+        self.sentence_model = SentenceTransformer(self.model_name)
 
         # Scaler for audio features
         self.scaler = None
+
+        # Batch size for encoding from config
+        self.batch_size = cfg.get('embeddings.batch_size', 256)
 
         # Features to use
         self.audio_feature_cols = [
@@ -111,7 +124,7 @@ class TrackEmbeddingGenerator:
         genre_embeddings = self.sentence_model.encode(
             genre_list,
             show_progress_bar=True,
-            batch_size=256
+            batch_size=self.batch_size
         )
 
         return genre_embeddings
@@ -204,8 +217,8 @@ class TrackEmbeddingGenerator:
 def generate_all_embeddings(
     data_path: str,
     output_dir: str,
-    w_audio: float = 10.0,
-    w_genre: float = 1.0
+    w_audio: float = None,
+    w_genre: float = None
 ) -> Dict:
     """
     Main function for generating embeddings of the whole dataset
@@ -219,6 +232,13 @@ def generate_all_embeddings(
     Returns:
         Dict with process information
     """
+    # Load defaults from config
+    cfg = get_config()
+    if w_audio is None:
+        w_audio = cfg.get('embeddings.audio_weight', 10.0)
+    if w_genre is None:
+        w_genre = cfg.get('embeddings.genre_weight', 1.0)
+
     # Load dataset
     print(f"Loading dataset from {data_path}...")
     df = pd.read_csv(data_path)

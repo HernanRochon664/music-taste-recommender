@@ -6,6 +6,7 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
+from config.config_loader import get_config
 from src.recommender import MusicRecommender
 from src.user_simulator import UserSimulator
 from src.business_metrics import format_metrics_report
@@ -17,11 +18,13 @@ if __name__ == "__main__":
     print("TEST OF RECOMMENDATION SYSTEM")
     print("="*60)
 
-    # Paths
+    # Paths (from config)
+    cfg = get_config()
     root_dir = Path(__file__).parent.parent
-    embeddings_path = root_dir / "data" / "embeddings" / "track_embeddings.npy"
-    track_ids_path = root_dir / "data" / "embeddings" / "track_ids.npy"
-    dataset_path = root_dir / "data" / "processed" / "spotify_clean_balanced.csv"
+    embeddings_dir = Path(cfg.get('paths.embeddings_dir', root_dir / "data" / "embeddings"))
+    embeddings_path = embeddings_dir / "track_embeddings.npy"
+    track_ids_path = embeddings_dir / "track_ids.npy"
+    dataset_path = Path(cfg.get('paths.processed_data', root_dir / "data" / "processed" / "spotify_clean_balanced.csv"))
 
     # Load system
     print("\n1️⃣ Loading system...")

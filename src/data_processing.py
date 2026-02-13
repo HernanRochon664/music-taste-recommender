@@ -12,6 +12,9 @@ import ast
 from typing import Optional, Dict, List
 from pathlib import Path
 
+from config.config_loader import get_config
+from config.genre_mapping import MIN_TRACKS_PER_GENRE, MAX_TRACKS_PER_GENRE
+
 
 class DatasetProcessor:
     """
@@ -21,9 +24,9 @@ class DatasetProcessor:
     def __init__(
         self,
         genre_mapping: Dict[str, List[str]],
-        min_tracks_per_genre: int = 10_000,
-        max_tracks_per_genre: int = 40_000,
-        random_state: int = 42
+        min_tracks_per_genre: Optional[int] = None,
+        max_tracks_per_genre: Optional[int] = None,
+        random_state: Optional[int] = None
     ):
         """
         Args:
@@ -32,6 +35,15 @@ class DatasetProcessor:
             max_tracks_per_genre: Maximum tracks to keep per genre
             random_state: Random seed for reproducibility
         """
+        # Load defaults from configuration if not provided
+        cfg = get_config()
+        if min_tracks_per_genre is None:
+            min_tracks_per_genre = cfg.get('data_processing.min_tracks_per_genre', MIN_TRACKS_PER_GENRE)
+        if max_tracks_per_genre is None:
+            max_tracks_per_genre = cfg.get('data_processing.max_tracks_per_genre', MAX_TRACKS_PER_GENRE)
+        if random_state is None:
+            random_state = cfg.get('data_processing.random_state', 42)
+
         self.genre_mapping = genre_mapping
         self.min_tracks = min_tracks_per_genre
         self.max_tracks = max_tracks_per_genre

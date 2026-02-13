@@ -8,7 +8,7 @@ project:
 
 # Data paths
 paths:
-  raw_data: "data/raw/almost-a-million-spotify-tracks.csv"
+  raw_data: "data/raw/music_data.csv"
   processed_data: "data/processed/spotify_clean_balanced.csv"
   embeddings_dir: "data/embeddings"
   evaluation_results: "data/evaluation_results"

@@ -14,6 +14,9 @@ from pathlib import Path
 
 from config.config_loader import get_config
 from config.genre_mapping import MIN_TRACKS_PER_GENRE, MAX_TRACKS_PER_GENRE
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class DatasetProcessor:
@@ -113,11 +116,11 @@ class DatasetProcessor:
         Returns:
             DataFrame with parsed genres
         """
-        print(f"📂 Loading dataset from {filepath}...")
+        logger.info(f"📂 Loading dataset from {filepath}...")
         df = pd.read_csv(filepath)
-        print(f"   Loaded: {df.shape}")
+        logger.debug(f"   Loaded: {df.shape}")
 
-        print("🔍 Parsing genres...")
+        logger.info("🔍 Parsing genres...")
         df['genres_list'] = df['genres'].apply(self.parse_genres)
         df['general_genre'] = df['genres_list'].apply(self.map_to_general_genre)
 
@@ -133,19 +136,19 @@ class DatasetProcessor:
         Returns:
             Filtered DataFrame
         """
-        print("🎯 Filtering valid genres...")
+        logger.info("🎯 Filtering valid genres...")
 
         # Show initial distribution
-        print("\n   Initial genre distribution:")
+        logger.debug("   Initial genre distribution:")
         genre_dist = df['general_genre'].value_counts()
         for genre, count in genre_dist.head(15).items():
-            print(f"      {genre:20s}: {count:,}")
+            logger.debug(f"      {genre:20s}: {count:,}")
 
         # Filter
         df_filtered = df[df['general_genre'].notna()].copy()
         df_filtered = df_filtered[df_filtered['general_genre'] != 'Other']
 
-        print(f"\n   ✅ Tracks after filtering: {len(df_filtered):,}")
+        logger.debug(f"   ✅ Tracks after filtering: {len(df_filtered):,}")
 
         return df_filtered
 
@@ -159,13 +162,13 @@ class DatasetProcessor:
         Returns:
             DataFrame with complete features
         """
-        print("🎵 Filtering complete audio features...")
+        logger.info("🎵 Filtering complete audio features...")
 
         initial_count = len(df)
         df_clean = df.dropna(subset=self.audio_features)
 
-        print(f"   Tracks with complete features: {len(df_clean):,}")
-        print(f"   Dropped: {initial_count - len(df_clean):,}")
+        logger.debug(f"   Tracks with complete features: {len(df_clean):,}")
+        logger.debug(f"   Dropped: {initial_count - len(df_clean):,}")
 
         return df_clean
 
@@ -179,10 +182,9 @@ class DatasetProcessor:
         Returns:
             Balanced DataFrame
         """
-        print("⚖️  Balancing dataset...")
-        print(f"   Min tracks per genre: {self.min_tracks:,}")
-        print(f"   Max tracks per genre: {self.max_tracks:,}")
-        print()
+        logger.info("⚖️  Balancing dataset...")
+        logger.debug(f"   Min tracks per genre: {self.min_tracks:,}")
+        logger.debug(f"   Max tracks per genre: {self.max_tracks:,}")
 
         balanced_dfs = []
         discarded_genres = []
@@ -192,7 +194,7 @@ class DatasetProcessor:
             n_tracks = len(genre_df)
 
             if n_tracks < self.min_tracks:
-                print(f"   ❌ {genre:20s}: {n_tracks:6,} tracks (< min, discarding)")
+                logger.debug(f"   ❌ {genre:20s}: {n_tracks:6,} tracks (< min, discarding)")
                 discarded_genres.append(genre)
                 continue
             elif n_tracks > self.max_tracks:
@@ -200,9 +202,9 @@ class DatasetProcessor:
                     n=self.max_tracks,
                     random_state=self.random_state
                 )
-                print(f"   📉 {genre:20s}: {n_tracks:6,} → {self.max_tracks:6,} tracks")
+                logger.debug(f"   📉 {genre:20s}: {n_tracks:6,} → {self.max_tracks:6,} tracks")
             else:
-                print(f"   ✅ {genre:20s}: {n_tracks:6,} tracks (kept)")
+                logger.debug(f"   ✅ {genre:20s}: {n_tracks:6,} tracks (kept)")
 
             balanced_dfs.append(genre_df)
 
@@ -214,11 +216,11 @@ class DatasetProcessor:
             random_state=self.random_state
         ).reset_index(drop=True)
 
-        print(f"\n   Final balanced dataset: {len(df_balanced):,} tracks")
-        print(f"   Genres included: {df_balanced['general_genre'].nunique()}")
+        logger.debug(f"   Final balanced dataset: {len(df_balanced):,} tracks")
+        logger.debug(f"   Genres included: {df_balanced['general_genre'].nunique()}")
 
         if discarded_genres:
-            print(f"   Discarded genres: {', '.join(discarded_genres)}")
+            logger.debug(f"   Discarded genres: {', '.join(discarded_genres)}")
 
         return df_balanced
 
@@ -232,9 +234,9 @@ class DatasetProcessor:
         Returns:
             DataFrame with selected columns
         """
-        print("📋 Selecting final columns...")
+        logger.info("📋 Selecting final columns...")
         df_final = df[self.final_columns].copy()
-        print(f"   Columns: {len(self.final_columns)}")
+        logger.debug(f"   Columns: {len(self.final_columns)}")
 
         return df_final
 
@@ -255,10 +257,9 @@ class DatasetProcessor:
         Returns:
             Processed DataFrame
         """
-        print("="*60)
-        print("DATASET PROCESSING PIPELINE")
-        print("="*60)
-        print()
+        logger.info("="*60)
+        logger.info("DATASET PROCESSING PIPELINE")
+        logger.info("="*60)
 
         # Step 1: Load and parse
         df = self.load_and_parse(input_path)
@@ -276,36 +277,37 @@ class DatasetProcessor:
         df_final = self.select_final_columns(df)
 
         # Step 6: Save
-        print("\n💾 Saving processed dataset...")
+        logger.info("💾 Saving processed dataset...")
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df_final.to_csv(output_path, index=False)
 
-        print(f"   ✅ Saved to: {output_path}")
-        print(f"   Shape: {df_final.shape}")
-        print(f"   Size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
+        logger.info(f"   ✅ Saved to: {output_path}")
+        logger.info(f"   Shape: {df_final.shape}")
+        logger.info(f"   Size: {output_path.stat().st_size / 1024 / 1024:.1f} MB")
 
         # Step 7: Stats
         if show_stats:
             self._print_statistics(df_final)
 
-        print("\n" + "="*60)
-        print("✅ PROCESSING COMPLETE")
-        print("="*60)
+        logger.info("="*60)
+        logger.info("✅ PROCESSING COMPLETE")
+        logger.info("="*60)
 
         return df_final
 
     def _print_statistics(self, df: pd.DataFrame):
-        """Print final dataset statistics"""
-        print("\n" + "="*60)
-        print("FINAL DATASET STATISTICS")
-        print("="*60)
+        """Log final dataset statistics"""
+        logger.debug("")
+        logger.debug("="*60)
+        logger.debug("FINAL DATASET STATISTICS")
+        logger.debug("="*60)
 
-        print("\n📊 Genre distribution:")
+        logger.debug("📊 Genre distribution:")
         genre_dist = df['general_genre'].value_counts().sort_index()
         for genre, count in genre_dist.items():
             pct = (count / len(df)) * 100
-            print(f"   {genre:20s}: {count:6,} ({pct:5.1f}%)")
+            logger.debug(f"   {genre:20s}: {count:6,} ({pct:5.1f}%)")
 
-        print("\n🎵 Audio features statistics:")
-        print(df[self.audio_features].describe().round(3))
+        logger.debug("🎵 Audio features statistics:")
+        logger.debug(df[self.audio_features].describe().round(3).to_string())

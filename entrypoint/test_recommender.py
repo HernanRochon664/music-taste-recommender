@@ -10,13 +10,16 @@ from config.config_loader import get_config
 from src.recommender import MusicRecommender
 from src.user_simulator import UserSimulator
 from src.business_metrics import format_metrics_report
+from utils.logger import get_logger
 import pandas as pd
+
+logger = get_logger(__name__)
 
 
 if __name__ == "__main__":
-    print("="*60)
-    print("TEST OF RECOMMENDATION SYSTEM")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("TEST OF RECOMMENDATION SYSTEM")
+    logger.info("="*60)
 
     # Paths (from config)
     cfg = get_config()
@@ -27,7 +30,7 @@ if __name__ == "__main__":
     dataset_path = Path(cfg.get('paths.processed_data', root_dir / "data" / "processed" / "spotify_clean_balanced.csv"))
 
     # Load system
-    print("\n1️⃣ Loading system...")
+    logger.info("\n1️⃣ Loading system...")
     recommender = MusicRecommender(
         embeddings_path,
         track_ids_path,
@@ -36,7 +39,7 @@ if __name__ == "__main__":
     )
 
     # Load dataset for simulation
-    print("\n2️⃣ Generating test user...")
+    logger.info("\n2️⃣ Generating test user...")
     df = pd.read_csv(dataset_path)
     simulator = UserSimulator(df, seed=42)
     test_users = simulator.generate_users(n_users=5, tracks_per_user=20)
@@ -44,35 +47,36 @@ if __name__ == "__main__":
     # Test with first user
     test_user = test_users[0]
 
-    print(f"\n📊 Test user:")
-    print(f"   ID: {test_user.user_id}")
-    print(f"   Favorite genre: {test_user.favorite_genre}")
-    print(f"   Tracks in history: {len(test_user.history)}")
+    logger.info(f"\n📋 Test user:")
+    logger.info(f"   ID: {test_user.user_id}")
+    logger.info(f"   Favorite genre: {test_user.favorite_genre}")
+    logger.info(f"   Tracks in history: {len(test_user.history)}")
 
-    print("\n   History (first 5 tracks):")
+    logger.info("   History (first 5 tracks):")
     for idx, row in test_user.history.head().iterrows():
-        print(f"      - {row['name'][:40]:40s} | {row['general_genre']}")
+        logger.info(f"      - {row['name'][:40]:40s} | {row['general_genre']}")
 
     # Generate recommendations
-    print("\n3️⃣ Generating recommendations...")
+    logger.info("\n3️⃣ Generating recommendations...")
     recommendations, metrics = recommender.recommend_for_user_history(
         test_user.history_track_ids,
         n_recommendations=10
     )
 
     # Show recommendations
-    print("\n🎵 RECOMMENDATIONS:")
-    print("="*80)
+    logger.info("\n🎵 RECOMMENDATIONS:")
+    logger.info("="*80)
     for idx, row in recommendations.iterrows():
-        print(f"{idx+1:2d}. {row['name'][:40]:40s} | {row['general_genre']:12s} | "
+        logger.info(f"{idx+1:2d}. {row['name'][:40]:40s} | {row['general_genre']:12s} | "
             f"Sim: {row['similarity']:.3f}")
 
     # Show metrics
-    print(format_metrics_report(metrics))
+    logger.info(format_metrics_report(metrics))
 
     # Test different strategies
-    print("\n4️⃣ Comparing strategies...")
-    print("="*60)
+    logger_info_msg = "\n4️⃣ Comparing strategies..."
+    logger.info(logger_info_msg)
+    logger.info("="*60)
 
     strategies = ['balanced', 'retention', 'discovery']
 
@@ -83,11 +87,11 @@ if __name__ == "__main__":
             n_recommendations=10
         )
 
-        print(f"\n{strategy_name.upper():12s} | "
+        logger.info(f"\n{strategy_name.upper():12s} | "
             f"Relevance: {metrics['relevance']:.3f} | "
             f"Diversity: {metrics['diversity']:.3f} | "
             f"Composite: {metrics['composite_score']:.3f}")
 
-    print("\n" + "="*60)
-    print("✅ TEST COMPLETED")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("✅ TEST COMPLETED")
+    logger.info("="*60)

@@ -21,6 +21,9 @@ from config.genre_mapping import (
     MAX_TRACKS_PER_GENRE
 )
 from config.config_loader import get_config
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # Configuration (load from YAML/config)
@@ -35,10 +38,10 @@ def main():
     # Check input file exists
     raw_path = Path(RAW_DATA_PATH)
     if not raw_path.exists():
-        print(f"❌ ERROR: Input file not found: {RAW_DATA_PATH}")
-        print(f"\n📥 Please download the dataset from:")
-        print(f"   https://www.kaggle.com/datasets/olegfostenko/almost-a-million-spotify-tracks")
-        print(f"\n   And place it in: {RAW_DATA_PATH}")
+        logger.error(f"❌ ERROR: Input file not found: {RAW_DATA_PATH}")
+        logger.error(f"\n📥 Please download the dataset from:")
+        logger.error(f"   https://www.kaggle.com/datasets/olegfostenko/almost-a-million-spotify-tracks")
+        logger.error(f"\n   And place it in: {RAW_DATA_PATH}")
         sys.exit(1)
 
     # Initialize processor (use config defaults where available)
@@ -58,11 +61,11 @@ def main():
             show_stats=True
         )
 
-        print(f"\n✅ Success! Processed {len(df_final):,} tracks")
+        logger.info(f"\n✅ Success! Processed {len(df_final):,} tracks")
 
     except Exception as e:
-        print(f"\n❌ ERROR during processing:")
-        print(f"   {str(e)}")
+        logger.error(f"\n❌ ERROR during processing:")
+        logger.error(f"   {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

@@ -7,6 +7,9 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 from config.config_loader import get_config
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -65,7 +68,7 @@ class UserSimulator:
             favorite_genre_ratio = cfg.get('evaluation.favorite_genre_ratio', 0.7)
         users = []
 
-        print(f"Generating {n_users} simulated users...")
+        logger.info(f"Generating {n_users} simulated users...")
 
         for user_id in range(n_users):
             # Select favorite genre (weighted by real distribution)
@@ -109,17 +112,17 @@ class UserSimulator:
 
             users.append(user)
 
-        print(f"✅ {len(users)} simulated users generated")
+        logger.info(f"✅ {len(users)} simulated users generated")
         self._print_distribution_summary(users)
 
         return users
 
     def _print_distribution_summary(self, users: List[SimulatedUser]):
-        """Prints summary of favorite genre distribution"""
+        """Logs summary of favorite genre distribution"""
         fav_genres = [u.favorite_genre for u in users]
         distribution = pd.Series(fav_genres).value_counts()
 
-        print("\n📊 Favorite Genre Distribution:")
+        logger.debug("📊 Favorite Genre Distribution:")
         for genre, count in distribution.items():
             pct = (count / len(users)) * 100
-            print(f"   {genre:15s}: {count:4d} ({pct:5.1f}%)")
+            logger.debug(f"   {genre:15s}: {count:4d} ({pct:5.1f}%)")

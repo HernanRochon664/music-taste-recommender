@@ -11,6 +11,9 @@ import pickle
 from .business_metrics import BusinessMetrics
 from config.business_config import RecommendationStrategy, get_strategy
 from config.config_loader import get_config
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class MusicRecommender:
@@ -34,7 +37,7 @@ class MusicRecommender:
             strategy: Name of the strategy ('balanced', 'retention', 'discovery')
             artist_popularity_threshold: Threshold to filter duplicates by artist popularity
         """
-        print("Loading recommendation system...")
+        logger.info("Loading recommendation system...")
 
         # Load config for duplicate filtering threshold
         cfg = get_config()
@@ -60,12 +63,11 @@ class MusicRecommender:
         # Load strategy
         self.strategy = get_strategy(strategy)
 
-        print(f"✅ System loaded:")
-        print(f"   - {len(self.track_ids):,} tracks")
-        print(f"   - Strategy: {self.strategy.name}")
-        print(f"   - Weights: Relevance={self.strategy.w_relevance}, "
-            f"Diversity={self.strategy.w_diversity}")
-        print(f"   - Duplicate filter threshold: {self.artist_popularity_threshold}")
+        logger.info(f"✅ System loaded")
+        logger.debug(f"   {len(self.track_ids):,} tracks available")
+        logger.debug(f"   Strategy: {self.strategy.name}")
+        logger.debug(f"   Weights: Relevance={self.strategy.w_relevance}, Diversity={self.strategy.w_diversity}")
+        logger.debug(f"   Duplicate filter threshold: {self.artist_popularity_threshold}")
 
     def get_track_info(self, track_id: str) -> pd.Series:
         """Get information of a track"""
@@ -352,6 +354,5 @@ class MusicRecommender:
     def change_strategy(self, strategy_name: str):
         """Changes the recommendation strategy"""
         self.strategy = get_strategy(strategy_name)
-        print(f"✅ Strategy changed to: {self.strategy.name}")
-        print(f"   Weights: Relevance={self.strategy.w_relevance}, "
-            f"Diversity={self.strategy.w_diversity}")
+        logger.info(f"✅ Strategy changed to: {self.strategy.name}")
+        logger.debug(f"   Weights: Relevance={self.strategy.w_relevance}, Diversity={self.strategy.w_diversity}")

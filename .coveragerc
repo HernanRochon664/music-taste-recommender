@@ -1,0 +1,25 @@
+[run]
+source =
+    src
+    app
+    utils
+    entrypoint
+    config
+omit =
+    */tests/*
+    */test_*.py
+    */notebooks/*
+    */data/*
+    */logs/*
+    */__pycache__/*
+    */venv/*
+    */.venv/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:

@@ -1,5 +1,0 @@
-outs:
-- md5: 155cea4a57608ff88cfa92b991fa4b8f
-  size: 698248400
-  hash: md5
-  path: track_embeddings.npy

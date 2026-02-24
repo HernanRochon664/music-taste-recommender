@@ -32,6 +32,7 @@ def download_embeddings_from_hf(
     embeddings_dir.mkdir(parents=True, exist_ok=True)
 
     files = [
+        "spotify_clean_balanced.csv",
         "track_embeddings.npy",
         "track_ids.npy",
         "scaler.pkl",
@@ -43,7 +44,13 @@ def download_embeddings_from_hf(
     print("🔽 Downloading embeddings from Hugging Face...")
 
     for filename in files:
-        local_path = embeddings_dir / filename
+        if filename.endswith('.csv'):
+            # CSV to processed/
+            local_path = embeddings_dir.parent / "processed" / filename
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            # Embeddings to embeddings/
+            local_path = embeddings_dir / filename
 
         if local_path.exists() and not force_download:
             print(f"  ✅ {filename} already exists locally")

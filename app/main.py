@@ -1,5 +1,5 @@
 """
-Music Taste Recommender - Streamlit Demo
+Music Discovery Engine - Streamlit Demo
 
 A business-driven recommendation system demonstrating
 configurable trade-offs between relevance and diversity.
@@ -13,18 +13,65 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from app_config import *
-from utils import load_recommender, load_dataset, get_popular_tracks
+from app_utils import load_recommender, load_dataset, get_popular_tracks
 from components.track_selector import render_track_selector
 from components.metrics_display import render_metrics
 from components.recommendations_table import render_recommendations
 
-# Page config
+# Check and download embeddings if needed
+from utils.download_embeddings import ensure_embeddings_available
+from config import config
+
+# Page config (must be first Streamlit command)
 st.set_page_config(
-    page_title="Music Taste Recommender",
+    page_title="Music Discovery Engine",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Embeddings check
+HF_REPO_ID = config.get('huggingface.repo_id')
+HF_TYPE = config.get('huggingface.repo_type')
+EMBEDDINGS_DIR = Path(config.get('paths.embeddings_dir'))
+embeddings_path = EMBEDDINGS_DIR / "track_embeddings.npy"
+
+# Download embeddings if not present
+if not embeddings_path.exists():
+    st.info("🔽 First run detected. Downloading embeddings from Hugging Face...")
+    st.caption(f"Repository: {HF_REPO_ID}")
+
+    # Get token if available
+    token = None
+    try:
+        if 'HF_TOKEN' in st.secrets:
+            token = st.secrets['HF_TOKEN']
+    except Exception:
+        pass
+
+    with st.spinner("⏳ Downloading embeddings. This will take 1-2 minutes..."):
+        success = ensure_embeddings_available(
+            repo_id=HF_REPO_ID,
+            repo_type=HF_TYPE,
+            embeddings_dir=str(EMBEDDINGS_DIR),
+            token=token
+        )
+
+    if success:
+        st.success("✅ Embeddings downloaded successfully! Reloading app...")
+        st.rerun()
+    else:
+        st.error(f"❌ Failed to download embeddings from {HF_REPO_ID}")
+        st.error("Please check:")
+        st.code("""
+        1. Repository exists and is public (or you have access)
+        2. Files are named correctly:
+            - track_embeddings.npy
+            - track_ids.npy
+            - scaler.pkl
+            - metadata.pkl
+        """)
+        st.stop()
 
 # Custom CSS
 st.markdown("""
@@ -119,15 +166,6 @@ def main():
                 n_recommendations=N_RECOMMENDATIONS,
                 n_candidates=100
             )
-
-            # DEBUG: Ver distribución de géneros
-            st.write("**DEBUG - Genre breakdown:**")
-            genre_counts = recommendations['general_genre'].value_counts()
-            for genre, count in genre_counts.items():
-                st.write(f"  {genre}: {count}")
-            st.write(f"Seed genre was: {seed_track['general_genre']}")
-            st.write(f"Tracks matching seed genre: {(recommendations['general_genre'] == seed_track['general_genre']).sum()}")
-            st.write("---")
 
             # Add evaluation metrics
             # Calculate diversity (% of tracks that are NOT the seed genre)

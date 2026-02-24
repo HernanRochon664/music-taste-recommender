@@ -106,6 +106,10 @@ class Config:
         """Get logging configuration"""
         return self.get('logging', {})
 
+    @property
+    def hf_config(self) -> Dict[str, Any]:
+        """Get Hugging Face configuration"""
+        return self.get('huggingface', {})
 
 # Global config instance
 config = Config()

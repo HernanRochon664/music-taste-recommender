@@ -15,13 +15,13 @@ import io
 class UTF8StreamHandler(logging.StreamHandler):
     """
     Custom StreamHandler that forces UTF-8 encoding
-    
+
     Fixes Windows console emoji/unicode issues
     """
     def __init__(self, stream=None):
         if stream is None:
             stream = sys.stdout
-        
+
         # Force UTF-8 encoding
         if hasattr(stream, 'buffer'):
             stream = io.TextIOWrapper(
@@ -30,9 +30,9 @@ class UTF8StreamHandler(logging.StreamHandler):
                 errors='replace',
                 line_buffering=True
             )
-        
+
         super().__init__(stream)
-    
+
     def emit(self, record):
         try:
             msg = self.format(record)
@@ -53,66 +53,66 @@ def setup_logger(
 ) -> logging.Logger:
     """
     Set up a logger with file and console handlers
-    
+
     Args:
         name: Logger name (usually __name__ of the module)
         log_dir: Directory to store log files
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         log_to_file: Whether to log to file
         log_to_console: Whether to log to console
-    
+
     Returns:
         Configured logger instance
     """
     # Create logger
     logger = logging.getLogger(name)
     logger.setLevel(getattr(logging, level.upper()))
-    
+
     # Avoid duplicate handlers
     if logger.handlers:
         return logger
-    
+
     # Create formatters
     detailed_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    
+
     simple_formatter = logging.Formatter(
         '%(levelname)s - %(message)s'
     )
-    
+
     # File handler
     if log_to_file:
         log_dir_path = Path(log_dir)
         log_dir_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Create log file with timestamp
         timestamp = datetime.now().strftime('%Y%m%d')
         log_file = log_dir_path / f"{name.replace('.', '_')}_{timestamp}.log"
-        
+
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(detailed_formatter)
         logger.addHandler(file_handler)
-    
+
     # Console handler with UTF-8 support
     if log_to_console:
         console_handler = UTF8StreamHandler()
         console_handler.setLevel(getattr(logging, level.upper()))
         console_handler.setFormatter(simple_formatter)
         logger.addHandler(console_handler)
-    
+
     return logger
 
 
 def get_logger(name: str) -> logging.Logger:
     """
     Get a logger instance with default configuration
-    
+
     Args:
         name: Logger name (usually __name__)
-    
+
     Returns:
         Logger instance
     """
@@ -129,7 +129,7 @@ def get_logger(name: str) -> logging.Logger:
         log_dir = 'logs'
         file_enabled = True
         console_enabled = True
-    
+
     return setup_logger(
         name=name,
         log_dir=log_dir,

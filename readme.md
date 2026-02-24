@@ -82,10 +82,12 @@ pip install -r requirements.txt
 ## 📊 Data Processing
 
 ### Download Dataset
+
 1. Download from [Kaggle](https://www.kaggle.com/datasets/olegfostenko/almost-a-million-spotify-tracks)
 2. Place in `data/raw/music_data.csv`
 
 ### Process Dataset
+
 ```bash
 python entrypoint/process_dataset.py
 ```
@@ -93,6 +95,7 @@ python entrypoint/process_dataset.py
 **Output:** `data/processed/spotify_clean_balanced.csv` (217K tracks, 9 genres)
 
 **Processing steps:**
+
 1. Parse genre strings to lists
 2. Map specific genres to 9 general categories
 3. Filter tracks with complete audio features
@@ -115,11 +118,45 @@ python entrypoint/test_recommender.py
 
 ### 3. Run Streamlit Demo
 
-![Demo Screenshot](docs/images/demo_screenshot.png)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://TU-APP-URL.streamlit.app)
 
-```bash
-streamlit run app/main.py
+## 🚀 Live Demo
+
+**Try it now:** [https://TU-APP-URL.streamlit.app](https://TU-APP-URL.streamlit.app)
+
+*Embeddings are automatically downloaded from [Hugging Face](https://huggingface.co/datasets/Herny664/music-taste-recommender) on first run.*
+
+![Demo Screenshot](docs/images/demo_screenshot.png)
 ```
+
+---
+
+## 🤗 Hugging Face Integration
+
+Pre-computed embeddings are hosted on Hugging Face Hub for easy deployment:
+
+**Repository:** [datasets/Herny664/music-taste-recommender](https://huggingface.co//datasets/Herny664/music-taste-recommender)
+
+The Streamlit demo automatically downloads embeddings on first run
+
+### Local Development
+
+To download embeddings manually (the function now supports `force_download` and an optional HF access `token`):
+
+```python
+from utils.download_embeddings import download_embeddings_from_hf
+
+# basic usage
+paths = download_embeddings_from_hf(
+    repo_id="Herny664/music-taste-recommender",
+    repo_type="dataset"
+    embeddings_dir="data/embeddings",
+    # force_download=True,            # uncomment to re-fetch even if files exist
+    # token="<your_hf_token>",       # provide if you need authentication
+)
+```
+
+The helper also handles creating the directory and returns the local file paths.
 
 ---
 
@@ -173,7 +210,7 @@ music-taste-recommender/
 ├── docs/
 │   ├── architecture.md
 │   └── images/
-├── models/
+├── utils/
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md
@@ -249,7 +286,7 @@ This architecture applies beyond music:
 
 **Hernan Rochon**
 Data Scientist
-[LinkedIn]([your-linkedin](https://www.linkedin.com/in/hernan-rochon/)) | [Portfolio](placeholder) | [Email](hernan.rochon7@gmail.com)
+[LinkedIn](<[your-linkedin](https://www.linkedin.com/in/hernan-rochon/)>) | [Portfolio](placeholder) | [Email](hernan.rochon7@gmail.com)
 
 ---
 

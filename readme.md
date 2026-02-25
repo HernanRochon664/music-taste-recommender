@@ -124,10 +124,11 @@ python entrypoint/test_recommender.py
 
 **Try it now:** [https://TU-APP-URL.streamlit.app](https://TU-APP-URL.streamlit.app)
 
-*Embeddings are automatically downloaded from [Hugging Face](https://huggingface.co/datasets/Herny664/music-taste-recommender) on first run.*
+_Embeddings are automatically downloaded from [Hugging Face](https://huggingface.co/datasets/Herny664/music-taste-recommender) on first run._
 
 ![Demo Screenshot](docs/images/demo_screenshot.png)
-```
+
+````
 
 ---
 
@@ -154,7 +155,7 @@ paths = download_embeddings_from_hf(
     # force_download=True,            # uncomment to re-fetch even if files exist
     # token="<your_hf_token>",       # provide if you need authentication
 )
-```
+````
 
 The helper also handles creating the directory and returns the local file paths.
 
@@ -187,31 +188,52 @@ _Genres with more musical neighbors (Country, Rock) achieve higher diversity wit
 
 ```
 music-taste-recommender/
-├── app/                          # Streamlit App
-├── config/
-│   └── business_config.py        # Strategy definitions
-├── data/
+├── app/                          # Streamlit app code
+│   ├── app_config.py
+│   ├── app_utils.py
+│   ├── main.py
+│   └── components/               # UI widgets
+│       ├── __init__.py
+│       ├── metrics_display.py
+│       ├── recommendations_table.py
+│       └── track_selector.py
+├── config/                       # Business & loader helpers
+│   ├── __init__.py
+│   ├── business_config.py        # Strategy definitions
+│   ├── config_loader.py
+│   ├── genre_mapping.py
+│   └── settings.yaml
+├── data/                         # Dataset & intermediate outputs
 │   ├── embeddings/               # Generated embeddings (DVC)
+│   │   ├── track_embeddings.npy
+│   │   ├── track_ids.npy
+│   │   └── ...
+│   ├── evaluation_results/       # Metrics CSVs
+│   │   └── ...
 │   ├── processed/                # Clean dataset
-│   └── evaluation_results/       # Metrics CSVs
-├── entrypoint/
+│   └── raw/                      # Original downloads
+├── entrypoint/                   # CLI scripts
 │   ├── generate_embeddings.py
+│   ├── process_dataset.py
 │   └── test_recommender.py
-├── src/
+├── src/                          # Core library (mirrors app)
 │   ├── embeddings.py             # Embedding generation
 │   ├── recommender.py            # Recommendation engine
 │   ├── business_metrics.py       # Business metrics calculation
 │   ├── user_simulator.py         # User simulation for evaluation
 │   └── utils.py                  # Helper functions
-├── notebooks/
+├── notebooks/                    # Analysis & evaluation
 │   ├── 01_data_exploration.ipynb
 │   ├── 02_audio_features_analysis.ipynb
 │   └── 03_evaluate_strategies.ipynb
 ├── docs/
 │   ├── architecture.md
 │   └── images/
-├── utils/
+├── utils/                        # miscellaneous scripts
+│   ├── download_embeddings.py
+│   └── logger.py
 ├── pyproject.toml
+├── pytest.ini
 ├── requirements.txt
 └── README.md
 ```

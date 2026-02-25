@@ -4,9 +4,11 @@ Download embeddings from Hugging Face Hub on first run
 
 from pathlib import Path
 from typing import Optional, Dict
+from .logger import get_logger
 
 from huggingface_hub import hf_hub_download
 
+logger = get_logger(__name__)
 
 def download_embeddings_from_hf(
     repo_id: str,
@@ -41,7 +43,7 @@ def download_embeddings_from_hf(
 
     downloaded_paths: Dict[str, str] = {}
 
-    print("🔽 Downloading embeddings from Hugging Face...")
+    logger.info("🔽 Downloading embeddings from Hugging Face...")
 
     for filename in files:
         if filename.endswith('.csv'):
@@ -53,30 +55,30 @@ def download_embeddings_from_hf(
             local_path = embeddings_dir / filename
 
         if local_path.exists() and not force_download:
-            print(f"  ✅ {filename} already exists locally")
+            logger.info(f"  ✅ {filename} already exists locally")
             downloaded_paths[filename] = str(local_path)
             continue
 
         try:
-            print(f"  📥 Downloading {filename}...")
+            logger.info(f"  📥 Downloading {filename}...")
             downloaded_file = hf_hub_download(
                 repo_id=repo_id,
                 repo_type=repo_type,
                 filename=filename,
-                cache_dir=embeddings_dir.parent / ".cache",
-                local_dir=embeddings_dir,
+                cache_dir=str(Path(embeddings_dir).parent / ".cache"),
+                local_dir=str(local_path.parent),
                 local_dir_use_symlinks=False,
                 token=token
             )
 
-            downloaded_paths[filename] = downloaded_file
-            print(f"  ✅ {filename} downloaded")
+            downloaded_paths[filename] = str(local_path)
+            logger.info(f"  ✅ {filename} downloaded")
 
         except Exception as e:
-            print(f"  ❌ Error downloading {filename}: {e}")
+            logger.error(f"  ❌ Error downloading {filename}: {e}")
             raise
 
-    print("✅ All embeddings downloaded successfully!")
+    logger.info("✅ All embeddings downloaded successfully!")
 
     return downloaded_paths
 
@@ -108,5 +110,5 @@ def ensure_embeddings_available(
         return True
 
     except Exception as e:
-        print(f"Failed to download embeddings: {e}")
+        logger.error(f"Failed to download embeddings: {e}")
         return False

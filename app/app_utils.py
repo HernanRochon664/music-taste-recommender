@@ -14,15 +14,17 @@ from src.recommender import MusicRecommender
 
 
 @st.cache_resource
-def load_recommender(embeddings_path, track_ids_path, dataset_path, strategy='balanced'):
+def load_recommender(embeddings_path, track_ids_path, dataset_path):
     """
     Load recommender system (cached)
+
+    Note: Strategy is NOT cached - it's changed dynamically via change_strategy()
     """
     recommender = MusicRecommender(
         str(embeddings_path),
         str(track_ids_path),
         str(dataset_path),
-        strategy=strategy
+        strategy='balanced'
     )
     return recommender
 

@@ -138,16 +138,17 @@ def main():
         recommender = load_recommender(
             EMBEDDINGS_PATH,
             TRACK_IDS_PATH,
-            DATASET_PATH,
-            strategy=strategy_key
+            DATASET_PATH
         )
+
+        recommender.change_strategy(strategy_key)
 
     # Track selection
     selected_track_id = render_track_selector(df, N_SEED_TRACKS_TO_SHOW)
 
     if selected_track_id is None:
         st.info("👆 Please select a track to get recommendations")
-        return
+        st.stop()
 
     # Strategy selection (already in sidebar)
     st.markdown("### ⚙️ Step 2: Review Strategy")
@@ -155,6 +156,8 @@ def main():
 
     # Generate button
     if st.button("🚀 Generate Recommendations", type="primary", use_container_width=True):
+
+        recommender.change_strategy(strategy_key)
 
         with st.spinner("Generating recommendations..."):
             # Get seed track info

@@ -118,11 +118,11 @@ python entrypoint/test_recommender.py
 
 ### 3. Run Streamlit Demo
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://TU-APP-URL.streamlit.app)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://music-taste-recommender.streamlit.app/)
 
 ## 🚀 Live Demo
 
-**Try it now:** [https://TU-APP-URL.streamlit.app](https://TU-APP-URL.streamlit.app)
+**Try it now:** [https://music-taste-recommender.streamlit.app/](https://music-taste-recommender.streamlit.app/)
 
 _Embeddings are automatically downloaded from [Hugging Face](https://huggingface.co/datasets/Herny664/music-taste-recommender) on first run._
 

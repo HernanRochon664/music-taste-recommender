@@ -308,7 +308,7 @@ This architecture applies beyond music:
 
 **Hernan Rochon**
 Data Scientist
-[LinkedIn](<[your-linkedin](https://www.linkedin.com/in/hernan-rochon/)>) | [Portfolio](placeholder) | [Email](hernan.rochon7@gmail.com)
+[LinkedIn](<[hernan-rochon](https://www.linkedin.com/in/hernan-rochon/)>) | [Portfolio](placeholder) | [Email](hernan.rochon7@gmail.com)
 
 ---
 

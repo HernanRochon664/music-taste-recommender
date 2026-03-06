@@ -128,8 +128,6 @@ _Embeddings are automatically downloaded from [Hugging Face](https://huggingface
 
 ![Demo Screenshot](docs/images/demo_screenshot.png)
 
-````
-
 ---
 
 ## 🤗 Hugging Face Integration
